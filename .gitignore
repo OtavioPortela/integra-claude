@@ -1,0 +1,10 @@
+node_modules/
+app/out/
+.DS_Store
+*.log
+.env
+.env.*
+!test-fixtures/projeto-teste/.env
+.claude/settings.local.json
+.claude/*.key
+docs/screenshots/

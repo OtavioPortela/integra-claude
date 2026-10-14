@@ -1,0 +1,16 @@
+{
+  "name": "integra-claude-vscode",
+  "displayName": "Integra Claude (ponte de terminais)",
+  "description": "Permite ao app Integra Claude listar terminais e enviar mensagens para sessões do Claude Code abertas no terminal integrado.",
+  "version": "0.1.1",
+  "publisher": "integra",
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.90.0" },
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished", "onUri"],
+  "contributes": {
+    "commands": [
+      { "command": "integraClaude.status", "title": "Integra Claude: Status da conexão" }
+    ]
+  }
+}
