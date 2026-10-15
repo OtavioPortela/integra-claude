@@ -10,9 +10,21 @@ let status = 'não pareado';
 // ---------- funções injetadas na página (rodam dentro de chatgpt.com) ----------
 
 async function pageApi(path) {
-  const s = await fetch('/api/auth/session').then((r) => r.json()).catch(() => ({}));
-  if (!s.accessToken) return { error: 'ChatGPT indisponível: faça login em chatgpt.com no Chrome' };
-  const r = await fetch(path, { headers: { Authorization: 'Bearer ' + s.accessToken } });
+  // Reaproveita o token de login por 5 min (antes era 1 pedido extra a cada leitura).
+  const cache = window.__integraTok;
+  let token = cache && cache.exp > Date.now() ? cache.token : null;
+  if (!token) {
+    const s = await fetch('/api/auth/session').then((r) => r.json()).catch(() => ({}));
+    if (!s.accessToken) return { error: 'ChatGPT indisponível: faça login em chatgpt.com no Chrome' };
+    token = s.accessToken;
+    window.__integraTok = { token, exp: Date.now() + 5 * 60 * 1000 };
+  }
+  const r = await fetch(path, { headers: { Authorization: 'Bearer ' + token } });
+  if (r.status === 401) window.__integraTok = null;
+  if (r.status === 429) {
+    const wait = Number(r.headers.get('retry-after')) || 30;
+    return { error: `O ChatGPT pediu uma pausa (muitas leituras). Tente de novo em ${wait} s.`, retryAfter: wait };
+  }
   if (!r.ok) return { error: `ChatGPT respondeu ${r.status} em ${path.split('?')[0]}` };
   return { data: await r.json() };
 }

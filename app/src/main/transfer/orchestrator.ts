@@ -8,7 +8,7 @@ import type { ClaudeAdapter } from '../integrations/claude/adapter'
 import { attachmentName, inlineFiles, mimeFor, readProjectFile } from '../files/project-files'
 
 const CONFIRM_TIMEOUT_MS = 45000
-const CONFIRM_POLL_MS = 1500
+const CONFIRM_POLL_MS = 3000
 
 interface Attempt {
   key: string

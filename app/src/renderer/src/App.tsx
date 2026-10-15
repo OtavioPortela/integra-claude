@@ -172,6 +172,7 @@ export function App() {
   useEffect(() => {
     if (!convId || !status?.chrome) return
     const t = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
       try {
         const data = await api.chatLastResponse(convId)
         setChatPrev((p) =>
@@ -180,7 +181,7 @@ export function App() {
             : { loading: false, data, error: null }
         )
       } catch {}
-    }, 10000)
+    }, 30000)
     return () => clearInterval(t)
   }, [convId, status?.chrome])
 

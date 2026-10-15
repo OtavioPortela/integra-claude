@@ -48,6 +48,18 @@ describe('lastAssistantResponse', () => {
     expect(lastAssistantResponse(conv([null, user('oi'), voice]))!.text).toBe('falado')
   })
 
+  it('resposta do modo de voz (end_turn vazio) conta como concluída', () => {
+    const vUser = { author: { role: 'user' }, content: { content_type: 'multimodal_text', parts: [{ content_type: 'audio_transcription', text: 'manda aí' }] } }
+    const vAsst = { author: { role: 'assistant' }, content: { content_type: 'multimodal_text', parts: [{ content_type: 'audio_transcription', text: 'Perfeito. Manda aí.' }] }, end_turn: null }
+    const r = lastAssistantResponse(conv([null, vUser, vAsst]))!
+    expect(r.text).toBe('Perfeito. Manda aí.')
+    expect(r.generating).toBe(false)
+  })
+
+  it('texto intermediário (end_turn false) no fim ainda é geração', () => {
+    expect(lastAssistantResponse(conv([null, user('oi'), asst('Vou pesquisar...', false)]))!.generating).toBe(true)
+  })
+
   it('remove marcas de citação internas', () => {
     const c = conv([null, user('oi'), asst('Linha # Projeto \ue200filecite\ue202turn3file0\ue202L1-L1\ue201\nfim', true)])
     expect(lastAssistantResponse(c)!.text).toBe('Linha # Projeto\nfim')

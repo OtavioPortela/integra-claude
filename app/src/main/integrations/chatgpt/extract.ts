@@ -91,7 +91,11 @@ export function lastAssistantResponse(c: ChatConversationJson): ChatLastResponse
   const unfinished = turn.some((m) => m.status && m.status !== 'finished_successfully')
   const answers = turn.filter(isAnswerText)
   const final = [...answers].reverse().find((m) => m.end_turn === true) ?? answers[answers.length - 1]
-  const generating = unfinished || !turn.some((m) => m.author.role === 'assistant' && m.end_turn === true)
+  // Terminou se: alguma mensagem marcou fim de turno, OU a última mensagem do ramo é a resposta
+  // concluída sem marca (respostas do modo de voz vêm com end_turn vazio).
+  const lastMsg = turn[turn.length - 1]
+  const endedByVoice = !!lastMsg && isAnswerText(lastMsg) && lastMsg.end_turn !== false && lastMsg.status === 'finished_successfully'
+  const generating = unfinished || !(turn.some((m) => m.author.role === 'assistant' && m.end_turn === true) || endedByVoice)
   if (!final) {
     if (lastUser >= 0 && generating) return { messageId: '', text: '', generating: true, createdAt: null }
     return null

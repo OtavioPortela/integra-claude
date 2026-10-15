@@ -32,8 +32,28 @@ export class ChatGptAdapter {
     return { items, offset, hasMore: items.length >= PAGE_SIZE }
   }
 
-  async getConversation(id: string): Promise<ChatConversationJson> {
-    return this.client().call<ChatConversationJson>('getConversation', { id }, 30000)
+  private cache = new Map<string, { at: number; p: Promise<ChatConversationJson> }>()
+  private pausedUntil = 0
+
+  /**
+   * Lê a conversa com cache de 3 s (várias partes do app pedem a mesma conversa juntas)
+   * e respeita a pausa pedida pelo ChatGPT (erro 429) para não piorar o bloqueio.
+   */
+  async getConversation(id: string, fresh = false): Promise<ChatConversationJson> {
+    const wait = Math.ceil((this.pausedUntil - Date.now()) / 1000)
+    if (wait > 0) throw new Error(`O ChatGPT pediu uma pausa (muitas leituras). Tente de novo em ${wait} s.`)
+    const hit = this.cache.get(id)
+    if (!fresh && hit && Date.now() - hit.at < 3000) return hit.p
+    const p = this.client()
+      .call<ChatConversationJson>('getConversation', { id }, 30000)
+      .catch((e: Error) => {
+        this.cache.delete(id)
+        const m = /em (\d+) s/.exec(e.message)
+        if (/pausa/.test(e.message)) this.pausedUntil = Date.now() + (m ? Number(m[1]) : 30) * 1000
+        throw e
+      })
+    this.cache.set(id, { at: Date.now(), p })
+    return p
   }
 
   async getLastResponse(id: string): Promise<LastResponse | null> {
