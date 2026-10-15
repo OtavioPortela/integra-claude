@@ -39,7 +39,7 @@ h2 { font-size: 13px; margin: 0; }
 .pill.bad { color: var(--bad); }
 .banner { padding: 6px 10px; border-radius: 6px; background: var(--panel); }
 .banner.bad { color: var(--bad); }
-main { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 8px; flex: 1 1 60%; min-height: 0; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 8px; flex: 1 1 60%; min-height: 0; }
 .col, .center, .files-list, .files-prev { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; min-height: 0; gap: 6px; }
 .center { overflow: auto; }
 .col-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -78,10 +78,10 @@ button.small { font-size: 11px; padding: 2px 8px; }
 .preview pre, .files-prev pre { margin: 0; padding: 8px; background: var(--bg); border-radius: 6px; white-space: pre-wrap; word-break: break-word; font: 12px ui-monospace, monospace; max-height: 220px; overflow: auto; }
 .files-prev pre { max-height: none; flex: 1; }
 .check { font-size: 12px; display: flex; gap: 6px; align-items: center; }
-.files { display: grid; grid-template-columns: 1fr 1.2fr; gap: 8px; flex: 1 1 40%; min-height: 0; }
+.files { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; flex: 1 1 40%; min-height: 0; }
 .filter { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
 .flist { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
 .flist li { display: flex; align-items: center; gap: 6px; padding: 2px 4px; font-size: 12px; }
 .flist li.blocked { opacity: 0.5; }
-.fname { flex: 1; font-family: ui-monospace, monospace; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fname { flex: 1; min-width: 0; font-family: ui-monospace, monospace; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mode { display: flex; gap: 10px; font-size: 12px; }

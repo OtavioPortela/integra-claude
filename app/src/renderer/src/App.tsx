@@ -168,6 +168,30 @@ export function App() {
     showFile(rel)
   }
 
+  // Prévia do ChatGPT se atualiza sozinha (sem piscar "Carregando"), para não ficar velha.
+  useEffect(() => {
+    if (!convId || !status?.chrome) return
+    const t = setInterval(async () => {
+      try {
+        const data = await api.chatLastResponse(convId)
+        setChatPrev((p) =>
+          p.loading || (p.data?.messageId === data?.messageId && p.data?.generating === data?.generating)
+            ? p
+            : { loading: false, data, error: null }
+        )
+      } catch {}
+    }, 10000)
+    return () => clearInterval(t)
+  }, [convId, status?.chrome])
+
+  // Se o envio foi recusado porque a resposta mudou, traz a resposta nova para a prévia.
+  useEffect(() => {
+    const a = tState['chatgpt-to-claude']
+    if (a?.status === 'error' && /mudou desde a prévia/.test(a.message)) loadChatPreview()
+    const b = tState['claude-to-chatgpt']
+    if (b?.status === 'error' && /mudou desde a prévia/.test(b.message)) loadClaudePreview()
+  }, [tState, loadChatPreview, loadClaudePreview])
+
   // Ao terminar um envio, atualiza as prévias.
   useEffect(() => {
     const s = tState['claude-to-chatgpt']
