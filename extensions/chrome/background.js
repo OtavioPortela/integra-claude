@@ -18,7 +18,7 @@ async function pageApi(path) {
 }
 
 function pageComposerState() {
-  const ed = document.querySelector('div.ProseMirror[contenteditable="true"]');
+  const ed = document.querySelector('form div.ProseMirror[contenteditable="true"]'); // caixa de mensagem (não o bloco "Escrita" da conversa)
   const form = ed ? ed.closest('form') : null;
   const btns = form ? [...form.querySelectorAll('button')] : [];
   const busy = btns.some((b) => /stop/i.test(b.dataset.testid || '') || /^(stop|parar|interromper)/i.test(b.getAttribute('aria-label') || ''));
@@ -27,7 +27,7 @@ function pageComposerState() {
 
 async function pageSend(text, files) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const ed = document.querySelector('div.ProseMirror[contenteditable="true"]');
+  const ed = document.querySelector('form div.ProseMirror[contenteditable="true"]'); // caixa de mensagem (não o bloco "Escrita" da conversa)
   if (!ed) return { error: 'Campo de mensagem do ChatGPT não encontrado' };
   const form = ed.closest('form');
   const chips = () => [...form.querySelectorAll('[data-composer-attachments] span[class*="group/composer-attachment"]')];
@@ -44,8 +44,12 @@ async function pageSend(text, files) {
       document.execCommand('delete');
     }
   };
-  if (ed.innerText.trim()) return { error: 'Há um rascunho no campo do ChatGPT nessa conversa. Limpe-o e tente de novo.' };
-  if (chips().length) return { error: 'Há anexos pendentes no campo do ChatGPT nessa conversa. Remova-os e tente de novo.' };
+  // O usuário pediu para enviar: o que estiver na caixa (rascunho ou anexos pendentes) é substituído.
+  if (ed.innerText.trim() || chips().length) {
+    await cleanup(chips());
+    await sleep(400);
+    if (ed.innerText.trim() || chips().length) return { error: 'Não consegui limpar a caixa de mensagem do ChatGPT. Nada foi enviado.' };
+  }
   ed.focus();
   let added = [];
   if (files && files.length) {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Integra Claude",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Liga suas conversas do ChatGPT ao app Integra Claude (local, no seu Mac).",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtXpmDVeVEFkOE8wsww0Y1udPhPRZwpmcS4kay7c7wmGemZKofI2cWBDE/RsPPDE99x/G4SOlnNy8BVnN56tFVe7nUXDy2weRZr5NSa+NCi6Mi4lMIbMLJSj1q43kKY4HbEcX+t+nOvByT/m74rhjNgNetRZ9NEp/MJbNy9wuWL5p4/v3zE85Sa6sWa5AxuhneL4Tnpw49D+xXH/XJNPyfgk56wFy5pQuxVg3Wm5wkoB0/BWehRa2/slnte4Tlp4v61hK75oPfPaQyujF/TJkV5TAmxOpZSBOi3jc9A5oGeKjl4gpPa7ZtqCT0DR2KCw719BiX8q1p6jPvvQ4av4heQIDAQAB",
   "permissions": ["tabs", "scripting", "storage", "alarms"],
