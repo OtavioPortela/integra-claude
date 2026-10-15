@@ -107,7 +107,15 @@ async function waitVscode(): Promise<void> {
 bridge.handleCli('status', () => status())
 bridge.handleCli('reloadChrome', async () => {
   await waitChrome()
-  return bridge.list('chrome').at(-1)!.call('reload', {}, 5000)
+  const old = bridge.list('chrome').at(-1)!
+  await old.call('reload', {}, 5000)
+  // Só responde quando a extensão recarregada reconectar (outra conexão).
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 500))
+    const now = bridge.list('chrome')
+    if (now.length && !now.includes(old)) return { reconnected: true }
+  }
+  throw new Error('A extensão recarregou mas ainda não reconectou')
 })
 bridge.handleCli('conversations', async ({ offset = 0 }) => {
   await waitChrome()

@@ -27,79 +27,123 @@ function pageComposerState() {
 
 async function pageSend(text, files) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const ed = document.querySelector('form div.ProseMirror[contenteditable="true"]'); // caixa de mensagem (não o bloco "Escrita" da conversa)
-  if (!ed) return { error: 'Campo de mensagem do ChatGPT não encontrado' };
-  const form = ed.closest('form');
-  const chips = () => [...form.querySelectorAll('[data-composer-attachments] span[class*="group/composer-attachment"]')];
-  // Desfaz o que esta extensão colocou no campo (anexos e texto), para não deixar resíduo.
-  const cleanup = async (addedChips) => {
-    for (const c of addedChips) {
-      const btns = c.querySelectorAll('button');
-      if (btns.length) btns[btns.length - 1].click();
-      await sleep(150);
-    }
-    if (ed.innerText.trim()) {
+  // Sempre busca a caixa ATUAL: o ChatGPT pode recriar o editor depois de carregar a conversa.
+  // (Só o editor dentro do formulário de envio; não o bloco "Escrita" da conversa.)
+  const getEd = () => document.querySelector('form div.ProseMirror[contenteditable="true"]');
+  const getForm = () => (getEd() ? getEd().closest('form') : null);
+  const chips = () => {
+    const f = getForm();
+    return f ? [...f.querySelectorAll('[data-composer-attachments] span[class*="group/composer-attachment"]')] : [];
+  };
+  const norm = (s) => s.replace(/\s+/g, ' ').trim();
+  const head = norm(text).slice(0, 40);
+  const hasText = () => !!getEd() && norm(getEd().innerText).startsWith(head);
+  const clearText = () => {
+    const ed = getEd();
+    if (ed && ed.innerText.trim()) {
       ed.focus();
       document.execCommand('selectAll');
       document.execCommand('delete');
     }
   };
-  // O usuário pediu para enviar: o que estiver na caixa (rascunho ou anexos pendentes) é substituído.
-  if (ed.innerText.trim() || chips().length) {
-    await cleanup(chips());
-    await sleep(400);
-    if (ed.innerText.trim() || chips().length) return { error: 'Não consegui limpar a caixa de mensagem do ChatGPT. Nada foi enviado.' };
+  // Desfaz o que esta extensão colocou no campo (anexos e texto), para não deixar resíduo.
+  const cleanup = async () => {
+    for (const c of chips()) {
+      const btns = c.querySelectorAll('button');
+      if (btns.length) btns[btns.length - 1].click();
+      await sleep(150);
+    }
+    clearText();
+  };
+  const paste = (dt) => {
+    const ed = getEd();
+    ed.focus();
+    ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  };
+
+  // 1) Espera a caixa ficar estável (o mesmo elemento por ~1 s).
+  let last = null;
+  let stable = 0;
+  for (let i = 0; i < 40 && stable < 4; i++) {
+    const ed = getEd();
+    stable = ed && ed === last ? stable + 1 : 0;
+    last = ed;
+    await sleep(250);
   }
-  ed.focus();
-  let added = [];
+  if (!getEd()) return { error: 'Campo de mensagem do ChatGPT não encontrado. Nada foi enviado.' };
+
+  // 2) O usuário pediu para enviar: o que estiver na caixa (rascunho ou anexos pendentes) é substituído.
+  if (getEd().innerText.trim() || chips().length) {
+    await cleanup();
+    await sleep(400);
+    if (getEd().innerText.trim() || chips().length) return { error: 'Não consegui limpar a caixa de mensagem do ChatGPT. Nada foi enviado.' };
+  }
+
+  // 3) Anexos.
   if (files && files.length) {
     const dt = new DataTransfer();
     for (const f of files) dt.items.add(new File([f.content], f.name, { type: f.mime }));
-    ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    paste(dt);
     const until = Date.now() + 90000;
     let ok = false;
+    let n = 0;
     while (Date.now() < until) {
       await sleep(700);
-      added = chips();
-      const uploading = form.querySelector('[role="progressbar"], circle[stroke-dasharray], .animate-spin');
-      const submit = form.querySelector('button[type="submit"]');
-      if (added.length === files.length && !uploading && submit && !submit.disabled) { ok = true; break; }
+      n = chips().length;
+      const form = getForm();
+      const uploading = form && form.querySelector('[role="progressbar"], circle[stroke-dasharray], .animate-spin');
+      const submit = form && form.querySelector('button[type="submit"]');
+      if (n === files.length && !uploading && submit && !submit.disabled) { ok = true; break; }
     }
     if (!ok) {
-      await cleanup(chips());
-      return { error: `Anexos não carregaram no ChatGPT (${added.length}/${files.length}). Nada foi enviado.` };
+      await cleanup();
+      return { error: `Anexos não carregaram no ChatGPT (${n}/${files.length}). Nada foi enviado.` };
     }
     await sleep(1200);
   }
-  const dt = new DataTransfer();
-  dt.setData('text/plain', text);
-  ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
-  await sleep(500);
-  const typed = ed.innerText.replace(/\s+/g, ' ').trim();
-  const head = text.replace(/\s+/g, ' ').trim().slice(0, 40);
-  if (!typed.startsWith(head)) {
-    await cleanup(added);
-    return { error: 'O texto não entrou corretamente no campo do ChatGPT. Nada foi enviado.' };
+
+  // 4) Texto: cola e confere na caixa atual; se a caixa foi recriada e o texto sumiu, cola de novo.
+  for (let attempt = 0; attempt < 3 && !hasText(); attempt++) {
+    if (attempt > 0) await sleep(800);
+    const dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    paste(dt);
+    await sleep(700);
   }
-  // O botão "Enviar" pode demorar a aparecer (aba em segundo plano, texto longo): espera até 15 s.
-  let submit = null;
+  if (!hasText()) {
+    await cleanup();
+    return { error: 'O texto não ficou no campo do ChatGPT (a página recriou a caixa). Nada foi enviado.' };
+  }
+
+  // 5) Enviar: espera o botão até 15 s (aba em segundo plano / texto longo).
   for (let i = 0; i < 30; i++) {
-    submit = form.querySelector('button[type="submit"]');
-    if (submit && !submit.disabled) break;
+    const form = getForm();
+    const submit = form && form.querySelector('button[type="submit"]');
+    if (submit && !submit.disabled && hasText()) {
+      submit.click();
+      return { clicked: true };
+    }
+    if (!hasText()) {
+      // A caixa foi recriada no meio do caminho: cola de novo.
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      paste(dt);
+    }
     await sleep(500);
   }
-  if (submit && !submit.disabled) {
-    submit.click();
-    return { clicked: true };
+  // Plano B: Enter no editor atual.
+  if (hasText()) {
+    const ed = getEd();
+    ed.focus();
+    ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+    await sleep(1500);
+    if (getEd() && !getEd().innerText.trim()) return { clicked: true };
   }
-  // Plano B: Enter no editor (o ChatGPT envia com Enter).
-  ed.focus();
-  ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-  await sleep(1500);
-  if (!ed.innerText.trim()) return { clicked: true };
-  const seen = [...form.querySelectorAll('button')].map((b) => `${b.getAttribute('aria-label') || b.type}${b.disabled ? ' (desativado)' : ''}`).join(', ');
-  await cleanup(added);
-  return { error: `Botão de enviar indisponível no ChatGPT (botões vistos: ${seen || 'nenhum'}). Nada foi enviado.` };
+  const form = getForm();
+  const seen = form ? [...form.querySelectorAll('button')].map((b) => `${b.getAttribute('aria-label') || b.type}${b.disabled ? ' (desativado)' : ''}`).join(', ') : '';
+  const had = hasText();
+  await cleanup();
+  return { error: `Não foi possível enviar no ChatGPT (texto na caixa: ${had ? 'sim' : 'não'}; botões: ${seen || 'nenhum'}). Nada foi enviado.` };
 }
 
 // ---------- abas ----------

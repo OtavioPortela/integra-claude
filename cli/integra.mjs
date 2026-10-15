@@ -159,7 +159,7 @@ async function main() {
       }
       case 'recarregar-chrome': {
         await call(ws, 'reloadChrome')
-        console.log('✅ Extensão do Chrome recarregada (reconecta em alguns segundos)')
+        console.log('✅ Extensão do Chrome recarregada e reconectada')
         break
       }
       case 'conversas': {
