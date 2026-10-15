@@ -34,6 +34,7 @@ export class ChatGptAdapter {
 
   private cache = new Map<string, { at: number; p: Promise<ChatConversationJson> }>()
   private pausedUntil = 0
+  private strikes = 0
 
   /**
    * Lê a conversa com cache de 3 s (várias partes do app pedem a mesma conversa juntas)
@@ -41,18 +42,25 @@ export class ChatGptAdapter {
    */
   async getConversation(id: string, fresh = false): Promise<ChatConversationJson> {
     const wait = Math.ceil((this.pausedUntil - Date.now()) / 1000)
-    if (wait > 0) throw new Error(`O ChatGPT pediu uma pausa (muitas leituras). Tente de novo em ${wait} s.`)
+    if (wait > 0) throw new Error(`O ChatGPT pediu uma pausa (muitas leituras). O app volta a ler em ${wait} s.`)
     const hit = this.cache.get(id)
     if (!fresh && hit && Date.now() - hit.at < 3000) return hit.p
     const p = this.client()
       .call<ChatConversationJson>('getConversation', { id }, 30000)
       .catch((e: Error) => {
         this.cache.delete(id)
-        const m = /em (\d+) s/.exec(e.message)
-        if (/pausa/.test(e.message)) this.pausedUntil = Date.now() + (m ? Number(m[1]) : 30) * 1000
+        if (/pausa/.test(e.message)) {
+          // Pausa crescente: no mínimo 60 s, dobrando a cada novo bloqueio (até 10 min).
+          const m = /em (\d+) s/.exec(e.message)
+          this.strikes++
+          const secs = Math.min(600, Math.max(m ? Number(m[1]) : 60, 60 * 2 ** (this.strikes - 1)))
+          this.pausedUntil = Date.now() + secs * 1000
+          throw new Error(`O ChatGPT pediu uma pausa (muitas leituras). O app vai esperar ${secs} s antes de ler de novo.`)
+        }
         throw e
       })
     this.cache.set(id, { at: Date.now(), p })
+    p.then(() => (this.strikes = 0), () => {})
     return p
   }
 

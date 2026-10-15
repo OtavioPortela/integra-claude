@@ -36,6 +36,8 @@ export function App() {
   const [convId, setConvId] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [chatPrev, setChatPrev] = useState<Preview>(emptyPreview)
+  const chatPrevRef = useRef(chatPrev)
+  chatPrevRef.current = chatPrev
   const [claudePrev, setClaudePrev] = useState<Preview>(emptyPreview)
   const [files, setFiles] = useState<ProjectFileList | null>(null)
   const [filesError, setFilesError] = useState<string | null>(null)
@@ -172,7 +174,8 @@ export function App() {
   useEffect(() => {
     if (!convId || !status?.chrome) return
     const t = setInterval(async () => {
-      if (document.visibilityState !== 'visible') return
+      // Sem leitura automática com a janela escondida ou depois de um bloqueio do ChatGPT.
+      if (document.visibilityState !== 'visible' || chatPrevRef.current.error) return
       try {
         const data = await api.chatLastResponse(convId)
         setChatPrev((p) =>
@@ -181,7 +184,7 @@ export function App() {
             : { loading: false, data, error: null }
         )
       } catch {}
-    }, 30000)
+    }, 60000)
     return () => clearInterval(t)
   }, [convId, status?.chrome])
 
