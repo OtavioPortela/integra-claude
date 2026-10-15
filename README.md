@@ -1,6 +1,16 @@
-# Integra Claude
+<p align="center">
+  <img src="app/build/icon.png" alt="Ícone do Integra Claude" width="140">
+</p>
 
-**Pare de copiar e colar entre o ChatGPT e o Claude Code.**
+<h1 align="center">Integra Claude</h1>
+
+<p align="center"><strong>Pare de copiar e colar entre o ChatGPT e o Claude Code.</strong></p>
+
+<p align="center">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-13%2B-lightgrey">
+  <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-green">
+  <img alt="Status POC" src="https://img.shields.io/badge/status-POC-orange">
+</p>
 
 Você conversa com o ChatGPT (inclusive por voz) para pensar ideias e preparar prompts, e usa o
 Claude Code no terminal para programar. O Integra Claude leva a última resposta de um para o
@@ -211,3 +221,7 @@ extensions/vscode/   Extensão do VS Code (fala com o terminal do Claude Code)
 specs/               Artefatos do Spec Kit
 test-fixtures/       Projeto de exemplo para testes
 ```
+
+## Licença
+
+[MIT](LICENSE): use, modifique e distribua à vontade.
