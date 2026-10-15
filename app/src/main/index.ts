@@ -105,6 +105,10 @@ async function waitVscode(): Promise<void> {
   for (let i = 0; i < 16 && bridge.list('vscode').length === 0; i++) await new Promise((r) => setTimeout(r, 500))
 }
 bridge.handleCli('status', () => status())
+bridge.handleCli('reloadChrome', async () => {
+  await waitChrome()
+  return bridge.list('chrome').at(-1)!.call('reload', {}, 5000)
+})
 bridge.handleCli('conversations', async ({ offset = 0 }) => {
   await waitChrome()
   return chat.listConversations(Number(offset))

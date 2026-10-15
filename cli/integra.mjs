@@ -17,6 +17,7 @@ const HELP = `integra — ponte ChatGPT ⇄ Claude Code
 
 Uso:
   integra status                         conexões do app
+  integra recarregar-chrome              recarrega a extensão do Chrome (após atualizar o projeto)
   integra conversas [--mais N]           lista conversas do ChatGPT (N = quantas já viu, p/ paginar)
   integra ler <idConversa>               última resposta do ChatGPT nessa conversa
   integra enviar-gpt <idConversa> [--arquivo caminho ...] [--modo anexar|texto] [--forcar]
@@ -154,6 +155,11 @@ async function main() {
         const s = await call(ws, 'status')
         if (json) return console.log(JSON.stringify(s, null, 2))
         console.log(`ChatGPT (Chrome): ${s.chrome ? 'conectado' : 'desconectado'} · VS Code: ${s.vscode} janela(s)`)
+        break
+      }
+      case 'recarregar-chrome': {
+        await call(ws, 'reloadChrome')
+        console.log('✅ Extensão do Chrome recarregada (reconecta em alguns segundos)')
         break
       }
       case 'conversas': {

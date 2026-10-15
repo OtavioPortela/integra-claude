@@ -81,13 +81,25 @@ async function pageSend(text, files) {
     await cleanup(added);
     return { error: 'O texto não entrou corretamente no campo do ChatGPT. Nada foi enviado.' };
   }
-  const submit = form.querySelector('button[type="submit"]');
-  if (!submit || submit.disabled) {
-    await cleanup(added);
-    return { error: 'Botão de enviar indisponível no ChatGPT. Nada foi enviado.' };
+  // O botão "Enviar" pode demorar a aparecer (aba em segundo plano, texto longo): espera até 15 s.
+  let submit = null;
+  for (let i = 0; i < 30; i++) {
+    submit = form.querySelector('button[type="submit"]');
+    if (submit && !submit.disabled) break;
+    await sleep(500);
   }
-  submit.click();
-  return { clicked: true };
+  if (submit && !submit.disabled) {
+    submit.click();
+    return { clicked: true };
+  }
+  // Plano B: Enter no editor (o ChatGPT envia com Enter).
+  ed.focus();
+  ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+  await sleep(1500);
+  if (!ed.innerText.trim()) return { clicked: true };
+  const seen = [...form.querySelectorAll('button')].map((b) => `${b.getAttribute('aria-label') || b.type}${b.disabled ? ' (desativado)' : ''}`).join(', ');
+  await cleanup(added);
+  return { error: `Botão de enviar indisponível no ChatGPT (botões vistos: ${seen || 'nenhum'}). Nada foi enviado.` };
 }
 
 // ---------- abas ----------
