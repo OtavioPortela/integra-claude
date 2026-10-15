@@ -111,6 +111,27 @@ Pronto! Você só faz isso uma vez.
    - **ChatGPT → Claude**: manda a última resposta do ChatGPT para o Claude.
    - **Claude → ChatGPT**: manda a última resposta do Claude para o ChatGPT.
 
+### Pelo próprio Claude Code (sem abrir o app)
+
+O projeto traz o comando de terminal `integra` e uma *skill* para o Claude Code. Com elas, você
+pede em qualquer sessão: **"envia isso pro GPT"**. O Claude lista as suas conversas, pergunta
+qual é e envia. Também funciona **"o que o GPT respondeu?"**.
+
+Instalação (uma vez):
+
+```bash
+ln -sf ~/Desktop/integra-claude/cli/integra.mjs ~/.local/bin/integra
+mkdir -p ~/.claude/skills/integra-claude
+cp ~/Desktop/integra-claude/cli/skill/SKILL.md ~/.claude/skills/integra-claude/
+```
+
+Comandos: `integra conversas`, `integra ler <id>`, `integra enviar-gpt <id> [--arquivo x.md]`,
+`integra sessoes`, `integra enviar-claude <id>`. Se o app estiver fechado, o `integra` abre sozinho.
+
+> Dica: em ChatGPT › Configurações › Personalização › **Instruções personalizadas**, conte ao
+> ChatGPT que você usa o Integra Claude e peça que, ao ouvir "prepara pro Claude", a resposta seja
+> só o prompt final (o app copia a última resposta inteira).
+
 ### Enviando arquivos para o ChatGPT
 
 1. Escolha a sessão do Claude: o painel de baixo mostra os arquivos do projeto dela.
@@ -138,8 +159,9 @@ Arquivos como `.env`, chaves e credenciais aparecem com 🔒 e **não podem ser 
 
 ## Limitações
 
-- **Só sessões do Claude Code no terminal do VS Code recebem mensagens.** Sessões no app Claude
-  Desktop, Terminal.app, iTerm ou Warp aparecem como "só leitura" (dá para copiar *delas*, não *para* elas).
+- **Recebem mensagens:** sessões do Claude Code no terminal do VS Code, no Terminal.app e no iTerm2
+  (estes dois pedem permissão de Automação do macOS na 1ª vez). Sessões no app Claude
+  Desktop ou Warp aparecem como "só leitura" (dá para copiar *delas*, não *para* elas).
 - **Deixe o prompt do Claude vazio antes de enviar.** O app não enxerga texto já digitado no
   terminal; se houver, ele se junta à mensagem.
 - Conversas dentro de **Projetos do ChatGPT** podem não aparecer na lista.
@@ -162,7 +184,7 @@ Arquivos como `.env`, chaves e credenciais aparecem com 🔒 e **não podem ser 
 | Pílula "VS Code: desconectado" | No VS Code: `Cmd+Shift+P` → **Reload Window**. |
 | Pílula "ChatGPT (Chrome): desconectado" | Clique na extensão Integra Claude no Chrome. Se mostrar "não pareado", pareie de novo (Passo 5). |
 | "Porta 47821 em uso" | Já existe um Integra Claude aberto. Feche a outra janela. |
-| Minha sessão aparece como "só leitura" | Abra o Claude Code num terminal **do VS Code**. |
+| Minha sessão aparece como "só leitura" | Abra o Claude Code num terminal do VS Code, no Terminal.app ou no iTerm2 (fora de tmux). Se o erro citar "Automação", autorize o app em Ajustes › Privacidade e Segurança › Automação. |
 | Atualizei o projeto e nada mudou | Rode `npm run build` de novo; no Chrome, clique em ↻ no card da extensão. |
 
 ---

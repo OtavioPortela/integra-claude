@@ -10,7 +10,7 @@ import { EventEmitter } from 'node:events'
 
 export const CHROME_EXTENSION_ID = 'flkhnafholknnhekibjideljokgjencm'
 
-export type ClientRole = 'chrome' | 'vscode'
+export type ClientRole = 'chrome' | 'vscode' | 'cli'
 
 export interface BridgeClient {
   id: string
@@ -40,6 +40,12 @@ export function tokensMatch(a: unknown, b: string): boolean {
 export class BridgeServer extends EventEmitter {
   private wss: WebSocketServer | null = null
   private clients = new Map<WebSocket, BridgeClient>()
+  /** Métodos que o comando local `integra` (papel cli) pode chamar no app. */
+  private cliHandlers = new Map<string, (params: any) => Promise<unknown> | unknown>()
+
+  handleCli(method: string, fn: (params: any) => Promise<unknown> | unknown): void {
+    this.cliHandlers.set(method, fn)
+  }
 
   constructor(private token: string) {
     super()
@@ -88,7 +94,7 @@ export class BridgeServer extends EventEmitter {
           ws.close(4003, 'unauthorized')
           return
         }
-        if (msg.role !== 'chrome' && msg.role !== 'vscode') {
+        if (msg.role !== 'chrome' && msg.role !== 'vscode' && msg.role !== 'cli') {
           ws.close(4004, 'bad role')
           return
         }
@@ -119,6 +125,17 @@ export class BridgeServer extends EventEmitter {
         clearTimeout(p.timer)
         if (msg.ok) p.resolve(msg.result)
         else p.reject(new Error(msg.error || 'Erro no cliente'))
+      } else if (msg.type === 'req' && client.role === 'cli') {
+        const fn = this.cliHandlers.get(msg.method)
+        Promise.resolve()
+          .then(() => {
+            if (!fn) throw new Error(`Método desconhecido: ${msg.method}`)
+            return fn(msg.params || {})
+          })
+          .then(
+            (result) => ws.send(JSON.stringify({ type: 'res', id: msg.id, ok: true, result })),
+            (e) => ws.send(JSON.stringify({ type: 'res', id: msg.id, ok: false, error: String(e?.message || e) }))
+          )
       } else if (msg.type === 'event') {
         this.emit('client-event', client, msg.name, msg.data)
       }

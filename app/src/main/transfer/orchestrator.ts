@@ -129,6 +129,58 @@ export class TransferOrchestrator extends EventEmitter {
     this.set(a.direction, 'unconfirmed', 'Envio NÃO confirmado. Confira o destino; um novo clique verifica antes de reenviar.')
   }
 
+  /**
+   * Envio de um texto livre (pedido pelo comando `integra`, ex.: de dentro de uma sessão do Claude).
+   * Mesmas garantias das setas: trava, destino revalidado, aviso de reenvio e confirmação.
+   * Arquivos são lidos de `root` (diretório de quem pediu) no momento do envio.
+   */
+  async sendCustom(o: {
+    target: 'chatgpt' | 'claude'
+    destId: string
+    text: string
+    files?: string[]
+    root?: string
+    fileMode?: 'attach' | 'inline'
+    force?: boolean
+  }): Promise<TransferState> {
+    const d: Direction = o.target === 'chatgpt' ? 'claude-to-chatgpt' : 'chatgpt-to-claude'
+    if (this.running.has(d)) throw new Error('Já existe um envio em andamento nessa direção')
+    this.running.add(d)
+    try {
+      this.lastAttempt.delete(d)
+      if (o.target === 'claude') {
+        if (!o.text.trim()) throw new Error('Texto vazio')
+        if (!o.force) this.guardResend(d, o.destId, o.text)
+        this.set(d, 'sending', 'Enviando para a sessão do Claude (pedido pelo comando integra)...')
+        const { sinceMs } = await this.claude.send(o.destId, o.text)
+        await this.confirm({ key: o.text, direction: d, destId: o.destId, text: o.text, sinceMs })
+      } else {
+        const files = (o.files ?? []).map((f) => {
+          if (!o.root) throw new Error('Diretório do projeto não informado')
+          return readProjectFile(o.root, f)
+        })
+        const { text, attachments } = composeForChatGpt({
+          response: o.text.trim() ? o.text : null,
+          project: o.root ? path.basename(o.root) : '',
+          files,
+          mode: o.fileMode ?? 'attach'
+        })
+        if (!text.trim()) throw new Error('Nada para enviar')
+        if (!o.force) this.guardResend(d, o.destId, text)
+        this.set(d, 'sending', 'Verificando a conversa de destino...')
+        if (await this.chat.isBusy(o.destId)) throw new Error('Destino ocupado: o ChatGPT está gerando nessa conversa')
+        this.set(d, 'sending', 'Enviando para o ChatGPT (pedido pelo comando integra)...')
+        const { sinceMs } = await this.chat.send(o.destId, text, attachments)
+        await this.confirm({ key: text, direction: d, destId: o.destId, text, sinceMs })
+      }
+    } catch (e: any) {
+      this.set(d, 'error', String(e?.message || e))
+    } finally {
+      this.running.delete(d)
+    }
+    return this.state(d)
+  }
+
   private async chatToClaude(req: TransferRequest): Promise<void> {
     const d = req.direction
     this.set(d, 'reading', 'Lendo a última resposta do ChatGPT...')

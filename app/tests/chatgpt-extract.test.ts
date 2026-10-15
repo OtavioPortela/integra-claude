@@ -48,6 +48,11 @@ describe('lastAssistantResponse', () => {
     expect(lastAssistantResponse(conv([null, user('oi'), voice]))!.text).toBe('falado')
   })
 
+  it('remove marcas de citação internas', () => {
+    const c = conv([null, user('oi'), asst('Linha # Projeto \ue200filecite\ue202turn3file0\ue202L1-L1\ue201\nfim', true)])
+    expect(lastAssistantResponse(c)!.text).toBe('Linha # Projeto\nfim')
+  })
+
   it('retorna null sem resposta do assistente', () => {
     expect(lastAssistantResponse(conv([null]))).toBeNull()
   })

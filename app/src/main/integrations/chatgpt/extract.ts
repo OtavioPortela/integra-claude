@@ -36,6 +36,11 @@ function partsText(parts: unknown[] | undefined): string {
     .join('\n')
 }
 
+/** Remove marcas internas de citação do ChatGPT (ex.: \ue200filecite\ue202turn3file0\ue202L1-L1\ue201). */
+export function stripCitations(s: string): string {
+  return s.replace(/[ \t]?\ue200[^\ue201]*\ue201/g, '')
+}
+
 /** Caminho da raiz até o nó atual (o ramo que o usuário está vendo). */
 export function currentBranch(c: ChatConversationJson): NonNullable<ChatNode['message']>[] {
   const out: NonNullable<ChatNode['message']>[] = []
@@ -93,7 +98,7 @@ export function lastAssistantResponse(c: ChatConversationJson): ChatLastResponse
   }
   return {
     messageId: final.id,
-    text: partsText(final.content.parts).trim(),
+    text: stripCitations(partsText(final.content.parts)).trim(),
     generating,
     createdAt: final.create_time ? new Date(final.create_time * 1000).toISOString() : null
   }

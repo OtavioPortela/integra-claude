@@ -95,10 +95,43 @@ handle('openTestSession', async (cwd: string) => {
   return vs.call('openClaudeTerminal', { cwd }, 10000)
 })
 
+// ---- comandos do `integra` (terminal / skill do Claude Code) ----
+async function waitChrome(): Promise<void> {
+  for (let i = 0; i < 30 && !chat.connected(); i++) await new Promise((r) => setTimeout(r, 500))
+  if (!chat.connected()) throw new Error('Navegador desconectado: abra o Chrome (extensão Integra Claude pareada)')
+}
+// Logo depois de abrir, a extensão do VS Code leva alguns segundos para reconectar.
+async function waitVscode(): Promise<void> {
+  for (let i = 0; i < 16 && bridge.list('vscode').length === 0; i++) await new Promise((r) => setTimeout(r, 500))
+}
+bridge.handleCli('status', () => status())
+bridge.handleCli('conversations', async ({ offset = 0 }) => {
+  await waitChrome()
+  return chat.listConversations(Number(offset))
+})
+bridge.handleCli('chatLast', async ({ id }) => {
+  await waitChrome()
+  return chat.getLastResponse(String(id))
+})
+bridge.handleCli('sessions', async ({ limit = 10 }) => {
+  await waitVscode()
+  return claude.listSessions(Number(limit))
+})
+bridge.handleCli('claudeLast', ({ id }) => claude.getLastResponse(String(id)))
+bridge.handleCli('sendChatGpt', async (p) => {
+  await waitChrome()
+  return transfers.sendCustom({ target: 'chatgpt', destId: String(p.id), text: String(p.text ?? ''), files: p.files ?? [], root: p.root, fileMode: p.fileMode, force: !!p.force })
+})
+bridge.handleCli('sendClaude', async (p) =>
+  waitVscode().then(() => transfers.sendCustom({ target: 'claude', destId: String(p.id), text: String(p.text ?? ''), force: !!p.force }))
+)
+
 transfers.on('state', (s) => send('transfer-state', s))
 bridge.on('change', () => send('status', status()))
 
 app.whenReady().then(async () => {
+  // Ícone no Dock (o app roda sem empacotar, então o bundle é o do Electron).
+  app.dock?.setIcon(path.join(__dirname, '../../build/icon.png'))
   try {
     await bridge.listen(config.port)
     writeBridgeFile(config.port, config.token)
