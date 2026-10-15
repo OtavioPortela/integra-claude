@@ -66,7 +66,7 @@ nesta POC.
 
 ## Pendências (fora desta POC)
 
-- [ ] T033 Adaptador para outros terminais (Terminal.app/iTerm via AppleScript, Warp)
+- [x] T033 Adaptador para outros terminais: Terminal.app (validado) e iTerm2 (não validado) via AppleScript em `app/src/main/integrations/claude/macos-terminals.ts`; testes em `app/tests/macos-terminals.test.ts`; E2E real `app/scripts/terminal-e2e.mts`. Warp inviável (sem AppleScript/API): só leitura
 - [ ] T034 Listar conversas dentro de "Projetos" do ChatGPT
 - [ ] T035 Persistir o histórico de envios entre reaberturas (hoje o aviso de reenvio vale só durante a execução)
 - [ ] T036 Empacotar o app como `.app` assinado

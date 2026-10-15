@@ -10,14 +10,26 @@ Detalhes dos experimentos: [research.md](../specs/001-ponte-chatgpt-claude/resea
 | WebSocket local, e não Native Messaging | Um servidor atende Chrome e VS Code. Native Messaging exigiria um host extra |
 | Segurança local | Só 127.0.0.1, token de 192 bits, Origin fixa da extensão, arquivos com permissão 600 |
 | Extensão do VS Code para enviar ao Claude | Única forma documentada de escrever numa sessão **já aberta**, sem criar outro processo |
+| AppleScript para Terminal.app e iTerm2 | Ambos expõem o `tty` de cada aba/sessão: a aba é achada pelo TTY do processo `claude` (`ps`), sem abrir aba nem processo. O texto vai como colagem (`ESC[200~…ESC[201~`) e é passado por argv ao `osascript`, nunca interpolado no script |
 | JSON em vez de SQLite | Só há configuração e seleção para guardar |
 | Anexo real no ChatGPT | Validado: o ChatGPT lê o arquivo. "Colar como texto" fica como alternativa |
 | Extensões como "braços finos" | A lógica fica no app; quando o ChatGPT ou o Claude Code mudarem, conserta-se num arquivo isolado |
 
 ## Limitações conhecidas
 
-1. **Só sessões no terminal do VS Code recebem mensagens.** Sessões no app Claude Desktop,
-   Terminal.app ou Warp aparecem como "só leitura" (servem de origem, não de destino).
+1. **Recebem mensagens:** sessões no terminal do VS Code, no Terminal.app e no iTerm2.
+   Sessões no app Claude Desktop, no Warp ou dentro de tmux/screen aparecem como "só leitura"
+   (servem de origem, não de destino).
+   - **Terminal.app** (validado): `do script` na aba com o mesmo TTY. Na 1ª vez o macOS pede
+     permissão de Automação (Ajustes › Privacidade e Segurança › Automação). Antes de escrever, o app
+     confere que o `claude` está em **primeiro plano** no TTY (`ps` com `+`), que o sessionId não mudou
+     e que a sessão está ociosa; a entrega é confirmada pelo transcript.
+   - **iTerm2** (implementado, **não validado**: o iTerm2 não estava instalado na máquina de teste):
+     `write text … newline NO` na sessão com o mesmo `tty`, pausa de 0,4 s e Enter.
+   - **Warp: inviável.** Não tem dicionário AppleScript (`sdef` falha) nem API/CLI para escrever numa
+     aba existente; o esquema `warp://` só abre abas/janelas novas. Restaria simular teclado
+     (System Events), que depende do foco e pode digitar na janela errada — contra a constituição.
+   - **tmux/screen:** o ancestral é o servidor do tmux, não o app de terminal; fica só leitura.
 2. **Depende de formatos internos (frágil):**
    - ChatGPT: endpoints `/backend-api` e HTML do campo de mensagem → `extensions/chrome/background.js`
    - Claude Code: `~/.claude/sessions/*.json` e transcripts JSONL → `app/src/main/integrations/claude/`
