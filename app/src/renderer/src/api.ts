@@ -1,4 +1,5 @@
 import type {
+  AutoBridgeState,
   ChatConversationPage,
   ClaudeSessionList,
   ConnectionStatus,
@@ -39,5 +40,10 @@ export const api = {
   getSelection: () => call<{ selection: Selection; fileMode: 'attach' | 'inline' }>('getSelection'),
   saveSelection: (s: Selection, fileMode: 'attach' | 'inline') => call<void>('saveSelection', s, fileMode),
   openTestSession: (cwd: string) => call<unknown>('openTestSession', cwd),
-  on: (channel: 'status' | 'transfer-state', fn: (p: any) => void): (() => void) => window.integra.on(channel, fn)
+  autoBridgeState: () => call<AutoBridgeState>('autoBridgeState'),
+  autoBridgeEnable: (o: { sessionId: string; sessionTitle: string; conversationId: string; conversationTitle: string }) =>
+    call<AutoBridgeState>('autoBridgeEnable', o),
+  autoBridgeDisable: () => call<AutoBridgeState>('autoBridgeDisable'),
+  autoBridgeRetry: () => call<AutoBridgeState>('autoBridgeRetry'),
+  on: (channel: 'status' | 'transfer-state' | 'auto-bridge', fn: (p: any) => void): (() => void) => window.integra.on(channel, fn)
 }

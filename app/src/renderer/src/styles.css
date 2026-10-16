@@ -85,3 +85,11 @@ button.small { font-size: 11px; padding: 2px 8px; }
 .flist li.blocked { opacity: 0.5; }
 .fname { flex: 1; min-width: 0; font-family: ui-monospace, monospace; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mode { display: flex; gap: 10px; font-size: 12px; }
+.bridgebar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); font-size: 12px; min-width: 0; }
+.bridgebar.ok { border-color: var(--ok); }
+.bridgebar.ok .strong { color: var(--ok); }
+.bridgebar.bad { border-color: var(--bad); }
+.bridgebar.bad .strong { color: var(--bad); }
+.bridgebar .route-mini { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.bridgebar .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.bridgebar .spacer { flex: 1; }

@@ -142,6 +142,25 @@ Comandos: `integra conversas`, `integra ler <id>`, `integra enviar-gpt <id> [--a
 > ChatGPT que você usa o Integra Claude e peça que, ao ouvir "prepara pro Claude", a resposta seja
 > só o prompt final (o app copia a última resposta inteira).
 
+### Ponte automática (Claude → ChatGPT)
+
+Faz cada **resposta final** de uma sessão do Claude (por exemplo, a sua sessão "Juiz") ir
+**sozinha** para uma conversa do ChatGPT, para o GPT acompanhar o que está acontecendo.
+
+1. Selecione a sessão do Claude (direita) e a conversa do ChatGPT (esquerda).
+2. Clique em **Ligar com a seleção atual** na barra "Ponte automática".
+3. Pronto: a barra mostra **ATIVA**, e cada nova resposta do Claude é enviada uma vez só, sempre
+   inteira (o app espera o Claude terminar). Pelo terminal: `integra ponte`.
+
+- É só nesse sentido: nada volta sozinho do ChatGPT para o Claude (não há loop).
+- Respostas que já existiam quando você ligou não são enviadas. Reiniciar o app não reenvia nada.
+- Se o envio falhar, o app tenta de novo 3 vezes (em 15 s, 1 min e 3 min) e depois mostra
+  **Tentar de novo**. Se várias respostas se acumularem durante a falha, vai só a mais recente.
+- A sessão de origem pode estar no painel do Claude no VS Code (só precisa ser lida).
+- **Modo de voz:** a mensagem chega na conversa e o ChatGPT responde, mas o modo de voz aberto
+  **não lê a resposta em voz alta**. É uma limitação do ChatGPT: o modo de voz não reage a mensagens
+  que chegam por texto.
+
 ### Enviando arquivos para o ChatGPT
 
 1. Escolha a sessão do Claude: o painel de baixo mostra os arquivos do projeto dela.

@@ -6,6 +6,7 @@ import { ChatGptAdapter } from './integrations/chatgpt/adapter'
 import { ClaudeAdapter } from './integrations/claude/adapter'
 import { listProjectFiles, readProjectFile } from './files/project-files'
 import { TransferOrchestrator } from './transfer/orchestrator'
+import { AutoBridge } from './autobridge'
 import type { ConnectionStatus, Direction, Selection, TransferRequest } from '../shared/types'
 
 const config = loadConfig()
@@ -13,6 +14,17 @@ const bridge = new BridgeServer(config.token)
 const chat = new ChatGptAdapter(() => bridge.list('chrome').at(-1) ?? null)
 const claude = new ClaudeAdapter(() => bridge.list('vscode'))
 const transfers = new TransferOrchestrator(chat, claude)
+// Ponte automática: Claude (sessão escolhida) → ChatGPT (conversa escolhida). Só nesse sentido.
+const autoBridge = new AutoBridge(config.autoBridge, {
+  claudeLast: (id) => claude.getLastResponse(id),
+  claudeAlive: (id) => claude.liveRecord(id) !== null,
+  // force: a deduplicação da ponte é pelo ID da mensagem do Claude
+  send: (conversationId, text) => transfers.sendCustom({ target: 'chatgpt', destId: conversationId, text, force: true }),
+  save: (cfg) => {
+    config.autoBridge = cfg
+    saveConfig(config)
+  }
+})
 let win: BrowserWindow | null = null
 let bridgeError: string | null = null
 
@@ -89,6 +101,12 @@ handle('saveSelection', (selection: Selection, fileMode: 'attach' | 'inline') =>
   config.fileMode = fileMode
   saveConfig(config)
 })
+handle('autoBridgeState', () => autoBridge.state())
+handle('autoBridgeEnable', (o: { sessionId: string; sessionTitle: string; conversationId: string; conversationTitle: string }) =>
+  autoBridge.enable(o)
+)
+handle('autoBridgeDisable', () => autoBridge.disable())
+handle('autoBridgeRetry', () => autoBridge.retry())
 handle('openTestSession', async (cwd: string) => {
   const vs = bridge.list('vscode')[0]
   if (!vs) throw new Error('Extensão do VS Code não conectada')
@@ -138,6 +156,14 @@ bridge.handleCli('sendClaude', async (p) =>
   waitVscode().then(() => transfers.sendCustom({ target: 'claude', destId: String(p.id), text: String(p.text ?? ''), force: !!p.force }))
 )
 
+bridge.handleCli('autoBridgeState', () => autoBridge.state())
+bridge.handleCli('autoBridgeEnable', (p) =>
+  autoBridge.enable({ sessionId: String(p.sessionId), sessionTitle: String(p.sessionTitle ?? ''), conversationId: String(p.conversationId), conversationTitle: String(p.conversationTitle ?? '') })
+)
+bridge.handleCli('autoBridgeDisable', () => autoBridge.disable())
+bridge.handleCli('autoBridgeRetry', () => autoBridge.retry())
+
+autoBridge.on('state', (s) => send('auto-bridge', s))
 transfers.on('state', (s) => send('transfer-state', s))
 bridge.on('change', () => send('status', status()))
 
@@ -151,10 +177,12 @@ app.whenReady().then(async () => {
     bridgeError = e?.code === 'EADDRINUSE' ? `Porta ${config.port} em uso (outra instância aberta?)` : String(e?.message || e)
   }
   createWindow()
+  autoBridge.start()
 })
 
 app.on('window-all-closed', () => app.quit())
 app.on('will-quit', () => {
+  autoBridge.stop()
   bridge.close()
   removeBridgeFile()
 })

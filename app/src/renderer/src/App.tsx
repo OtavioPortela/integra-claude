@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
+  AutoBridgeState,
   ChatConversation,
   ClaudeSession,
   ClaudeSessionList,
@@ -51,6 +52,7 @@ export function App() {
     'claude-to-chatgpt': null
   })
   const [copied, setCopied] = useState(false)
+  const [bridgeState, setBridgeState] = useState<AutoBridgeState | null>(null)
   const restored = useRef(false)
 
   const session: ClaudeSession | null = useMemo(() => {
@@ -70,9 +72,12 @@ export function App() {
     })
     const off1 = api.on('status', setStatus)
     const off2 = api.on('transfer-state', (s: TransferState) => setTState((t) => ({ ...t, [s.direction]: s })))
+    api.autoBridgeState().then(setBridgeState)
+    const off3 = api.on('auto-bridge', setBridgeState)
     return () => {
       off1()
       off2()
+      off3()
     }
   }, [])
 
@@ -285,6 +290,21 @@ export function App() {
       </header>
       {status?.error && <div className="banner bad">Servidor local: {status.error}</div>}
 
+      <AutoBridgeBar
+        state={bridgeState}
+        canEnable={!!(session && conv)}
+        selection={session && conv ? `${session.title} → ${conv.title}` : ''}
+        onEnable={() =>
+          session &&
+          conv &&
+          api
+            .autoBridgeEnable({ sessionId: session.sessionId, sessionTitle: session.title, conversationId: conv.id, conversationTitle: conv.title })
+            .then(setBridgeState)
+        }
+        onDisable={() => api.autoBridgeDisable().then(setBridgeState)}
+        onRetry={() => api.autoBridgeRetry().then(setBridgeState)}
+      />
+
       <main>
         {/* ---------------- ChatGPT ---------------- */}
         <section className="col">
@@ -416,6 +436,45 @@ export function App() {
           )}
         </div>
       </section>
+    </div>
+  )
+}
+
+function AutoBridgeBar(props: {
+  state: AutoBridgeState | null
+  canEnable: boolean
+  selection: string
+  onEnable: () => void
+  onDisable: () => void
+  onRetry: () => void
+}) {
+  const st = props.state
+  const on = !!st?.enabled
+  const cls = !on ? 'off' : st.status === 'error' || st.status === 'offline' ? 'bad' : 'ok'
+  return (
+    <div className={`bridgebar ${cls}`}>
+      <span className="strong">Ponte automática: {on ? 'ATIVA' : 'DESLIGADA'}</span>
+      {on ? (
+        <>
+          <span className="route-mini">
+            {st.sessionTitle} → {st.conversationTitle}
+          </span>
+          <span className="muted small">{st.message}</span>
+          <span className="spacer" />
+          {st.pendingRetry && <button className="small" onClick={props.onRetry}>Tentar de novo</button>}
+          <button className="small" onClick={props.onDisable}>Desligar</button>
+        </>
+      ) : (
+        <>
+          <span className="muted small">
+            Envia sozinho cada resposta final do Claude para o ChatGPT (só nesse sentido).
+          </span>
+          <span className="spacer" />
+          <button className="small" disabled={!props.canEnable} onClick={props.onEnable} title={props.selection}>
+            {props.canEnable ? 'Ligar com a seleção atual' : 'Selecione a conversa e a sessão'}
+          </button>
+        </>
+      )}
     </div>
   )
 }

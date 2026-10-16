@@ -105,3 +105,17 @@ export interface Selection {
   conversationId: string | null
   sessionId: string | null
 }
+
+export type AutoBridgeStatus = 'off' | 'watching' | 'sending' | 'error' | 'offline'
+
+export interface AutoBridgeState {
+  enabled: boolean
+  status: AutoBridgeStatus
+  message: string
+  sessionId: string | null
+  sessionTitle: string
+  conversationId: string | null
+  conversationTitle: string
+  lastSentAt: number | null
+  pendingRetry: boolean
+}

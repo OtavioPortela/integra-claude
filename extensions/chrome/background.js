@@ -30,7 +30,8 @@ async function pageApi(path) {
 }
 
 function pageComposerState() {
-  const ed = document.querySelector('form div.ProseMirror[contenteditable="true"]'); // caixa de mensagem (não o bloco "Escrita" da conversa)
+  const all = [...document.querySelectorAll('form div.ProseMirror[contenteditable="true"]')]; // caixa de mensagem (não o bloco "Escrita")
+  const ed = all.find((e) => e.offsetParent !== null && e.getClientRects().length > 0) || all[all.length - 1] || null;
   const form = ed ? ed.closest('form') : null;
   const btns = form ? [...form.querySelectorAll('button')] : [];
   const busy = btns.some((b) => /stop/i.test(b.dataset.testid || '') || /^(stop|parar|interromper)/i.test(b.getAttribute('aria-label') || ''));
@@ -41,7 +42,11 @@ async function pageSend(text, files) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // Sempre busca a caixa ATUAL: o ChatGPT pode recriar o editor depois de carregar a conversa.
   // (Só o editor dentro do formulário de envio; não o bloco "Escrita" da conversa.)
-  const getEd = () => document.querySelector('form div.ProseMirror[contenteditable="true"]');
+  const getEd = () => {
+    // Pode haver mais de uma caixa (ex.: sobra escondida do modo de voz): usa a visível.
+    const all = [...document.querySelectorAll('form div.ProseMirror[contenteditable="true"]')];
+    return all.find((e) => e.offsetParent !== null && e.getClientRects().length > 0) || all[all.length - 1] || null;
+  };
   const getForm = () => (getEd() ? getEd().closest('form') : null);
   const chips = () => {
     const f = getForm();
@@ -50,12 +55,25 @@ async function pageSend(text, files) {
   const norm = (s) => s.replace(/\s+/g, ' ').trim();
   const head = norm(text).slice(0, 40);
   const hasText = () => !!getEd() && norm(getEd().innerText).startsWith(head);
-  const clearText = () => {
+  // Seleciona todo o conteúdo DA CAIXA (não da página) e espera o editor registrar a seleção.
+  const selectAllInEditor = async () => {
     const ed = getEd();
-    if (ed && ed.innerText.trim()) {
-      ed.focus();
-      document.execCommand('selectAll');
+    if (!ed) return;
+    ed.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(ed);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+    await sleep(150);
+  };
+  // Apaga o texto da caixa (funciona com a aba em segundo plano).
+  const clearText = async () => {
+    for (let i = 0; i < 3 && getEd() && getEd().innerText.trim(); i++) {
+      await selectAllInEditor();
       document.execCommand('delete');
+      await sleep(200);
     }
   };
   // Desfaz o que esta extensão colocou no campo (anexos e texto), para não deixar resíduo.
@@ -65,11 +83,12 @@ async function pageSend(text, files) {
       if (btns.length) btns[btns.length - 1].click();
       await sleep(150);
     }
-    clearText();
+    await clearText();
   };
-  const paste = (dt) => {
+  const paste = async (dt) => {
     const ed = getEd();
-    ed.focus();
+    if (ed.innerText.trim()) await selectAllInEditor(); // substitui o que estiver na caixa
+    else ed.focus();
     ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   };
 
@@ -88,14 +107,17 @@ async function pageSend(text, files) {
   if (getEd().innerText.trim() || chips().length) {
     await cleanup();
     await sleep(400);
-    if (getEd().innerText.trim() || chips().length) return { error: 'Não consegui limpar a caixa de mensagem do ChatGPT. Nada foi enviado.' };
+    if (chips().length) {
+      return { error: `Não consegui remover ${chips().length} anexo(s) pendente(s) da caixa do ChatGPT. Nada foi enviado.` };
+    }
+    // Se ainda sobrou texto, o envio cola POR CIMA dele (texto selecionado é substituído).
   }
 
   // 3) Anexos.
   if (files && files.length) {
     const dt = new DataTransfer();
     for (const f of files) dt.items.add(new File([f.content], f.name, { type: f.mime }));
-    paste(dt);
+    await paste(dt);
     const until = Date.now() + 90000;
     let ok = false;
     let n = 0;
@@ -119,7 +141,7 @@ async function pageSend(text, files) {
     if (attempt > 0) await sleep(800);
     const dt = new DataTransfer();
     dt.setData('text/plain', text);
-    paste(dt);
+    await paste(dt);
     await sleep(700);
   }
   if (!hasText()) {
@@ -139,7 +161,7 @@ async function pageSend(text, files) {
       // A caixa foi recriada no meio do caminho: cola de novo.
       const dt = new DataTransfer();
       dt.setData('text/plain', text);
-      paste(dt);
+      await paste(dt);
     }
     await sleep(500);
   }

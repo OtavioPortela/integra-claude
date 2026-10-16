@@ -27,6 +27,9 @@ Uso:
   integra ler-claude <idSessao>          última resposta de uma sessão do Claude
   integra enviar-claude <idSessao> [--forcar]
                                          envia o texto do stdin para outra sessão do Claude
+  integra ponte                          estado da ponte automática Claude → ChatGPT
+  integra ponte ligar <idSessao> <idConversa>   liga: cada resposta final da sessão vai sozinha para a conversa
+  integra ponte desligar | tentar        desliga / tenta de novo após falhas
 Opções: --json (saída em JSON)
 Exemplo:
   integra enviar-gpt 6acf...a9 --arquivo specs/001/spec.md <<'EOF'
@@ -160,6 +163,21 @@ async function main() {
       case 'recarregar-chrome': {
         await call(ws, 'reloadChrome')
         console.log('✅ Extensão do Chrome recarregada e reconectada')
+        break
+      }
+      case 'ponte': {
+        const sub = a1 || 'status'
+        const [, , sid, cid] = positional
+        let st
+        if (sub === 'ligar') {
+          if (!sid || !cid) die('uso: integra ponte ligar <idSessao> <idConversa>')
+          st = await call(ws, 'autoBridgeEnable', { sessionId: sid, conversationId: cid, sessionTitle: sid.slice(0, 8), conversationTitle: cid.slice(0, 8) })
+        } else if (sub === 'desligar') st = await call(ws, 'autoBridgeDisable')
+        else if (sub === 'tentar') st = await call(ws, 'autoBridgeRetry')
+        else st = await call(ws, 'autoBridgeState')
+        if (json) return console.log(JSON.stringify(st, null, 2))
+        console.log(`Ponte automática: ${st.enabled ? 'ATIVA' : 'DESLIGADA'}`)
+        if (st.enabled) console.log(`${st.sessionTitle} → ${st.conversationTitle}\n${st.message}`)
         break
       }
       case 'conversas': {

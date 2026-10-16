@@ -16,7 +16,11 @@ const api = {
   getSelection: () => invoke('getSelection'),
   saveSelection: (sel: unknown, fileMode: string) => invoke('saveSelection', sel, fileMode),
   openTestSession: (cwd: string) => invoke('openTestSession', cwd),
-  on: (channel: 'status' | 'transfer-state', fn: (payload: any) => void) => {
+  autoBridgeState: () => invoke('autoBridgeState'),
+  autoBridgeEnable: (o: unknown) => invoke('autoBridgeEnable', o),
+  autoBridgeDisable: () => invoke('autoBridgeDisable'),
+  autoBridgeRetry: () => invoke('autoBridgeRetry'),
+  on: (channel: 'status' | 'transfer-state' | 'auto-bridge', fn: (payload: any) => void) => {
     const listener = (_e: unknown, payload: unknown) => fn(payload)
     ipcRenderer.on(channel, listener)
     return () => ipcRenderer.removeListener(channel, listener)

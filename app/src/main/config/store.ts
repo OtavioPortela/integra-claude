@@ -12,11 +12,31 @@ export const BRIDGE_FILE = path.join(CONFIG_DIR, 'bridge.json')
 
 export const DEFAULT_PORT = 47821
 
+export interface AutoBridgeConfig {
+  enabled: boolean
+  sessionId: string | null
+  sessionTitle: string
+  conversationId: string | null
+  conversationTitle: string
+  /** ID da última resposta do Claude já tratada (enviada ou ignorada ao ligar) */
+  lastHandledMessageId: string | null
+}
+
+export const DEFAULT_AUTO_BRIDGE: AutoBridgeConfig = {
+  enabled: false,
+  sessionId: null,
+  sessionTitle: '',
+  conversationId: null,
+  conversationTitle: '',
+  lastHandledMessageId: null
+}
+
 export interface Config {
   token: string
   port: number
   selection: Selection
   fileMode: 'attach' | 'inline'
+  autoBridge: AutoBridgeConfig
 }
 
 function writePrivate(file: string, data: unknown): void {
@@ -34,7 +54,8 @@ export function loadConfig(): Config {
     token: cfg.token && cfg.token.length >= 32 ? cfg.token : crypto.randomBytes(24).toString('hex'),
     port: cfg.port ?? DEFAULT_PORT,
     selection: cfg.selection ?? { conversationId: null, sessionId: null },
-    fileMode: cfg.fileMode ?? 'attach'
+    fileMode: cfg.fileMode ?? 'attach',
+    autoBridge: { ...DEFAULT_AUTO_BRIDGE, ...(cfg.autoBridge ?? {}) }
   }
   writePrivate(CONFIG_FILE, full)
   return full

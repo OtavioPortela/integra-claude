@@ -20,6 +20,8 @@ integra enviar-gpt <idConversa> [--arquivo caminho/relativo ...] [--modo anexar|
 texto
 EOF
 integra sessoes                      # sessões ativas do Claude Code
+integra ponte                        # estado da ponte automática Claude → ChatGPT
+integra ponte ligar <idSessao> <idConversa> | desligar | tentar
 integra ler-claude <idSessao>        # última resposta de outra sessão do Claude
 integra enviar-claude <idSessao> <<'EOF'
 texto
