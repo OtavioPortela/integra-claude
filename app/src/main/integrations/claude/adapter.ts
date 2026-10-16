@@ -46,6 +46,10 @@ export function receiveStatus(o: {
 }): { canReceive: boolean; reason: string | null } {
   if (o.inVscode) return { canReceive: true, reason: null }
   if (o.entrypoint === 'claude-desktop') return { canReceive: false, reason: 'Sessão do app Claude Desktop: só leitura' }
+  // Painel da extensão Claude Code no VS Code: não há forma oficial de escrever numa sessão aberta
+  // (o link vscode://anthropic.claude-code/open recusa sessões já abertas).
+  if (o.entrypoint === 'claude-vscode')
+    return { canReceive: false, reason: 'Sessão no painel do Claude no VS Code: só leitura (para receber, abra o claude num terminal)' }
   if (o.macApp === 'terminal' || o.macApp === 'iterm') return { canReceive: true, reason: null }
   if (o.macApp === 'warp') return { canReceive: false, reason: WARP_REASON }
   return {
@@ -174,6 +178,7 @@ export class ClaudeAdapter {
       await target.client.call('sendText', { shellPid: target.shellPid, text }, 10000)
       return { sinceMs }
     }
+    if (rec.entrypoint === 'claude-vscode') throw new Error('Sessão no painel do Claude no VS Code: só leitura (para receber, abra o claude num terminal)')
     const app = isMac && rec.entrypoint !== 'claude-desktop' ? detectTerminalApp(rec.pid, processTree(), processCommands()) : null
     if (app !== 'terminal' && app !== 'iterm') {
       throw new Error(app === 'warp' ? WARP_REASON : 'Sessão não está num terminal do VS Code, Terminal.app ou iTerm2: só leitura')

@@ -29,6 +29,10 @@ Detalhes dos experimentos: [research.md](../specs/001-ponte-chatgpt-claude/resea
    - **Warp: inviável.** Não tem dicionário AppleScript (`sdef` falha) nem API/CLI para escrever numa
      aba existente; o esquema `warp://` só abre abas/janelas novas. Restaria simular teclado
      (System Events), que depende do foco e pode digitar na janela errada — contra a constituição.
+   - **Painel da extensão Claude Code no VS Code** (`entrypoint: claude-vscode`): só leitura. O link
+     oficial `vscode://anthropic.claude-code/open?session=…&prompt=…` recusa sessões já abertas
+     ("Session is already open. Your prompt was not applied") e não há comando para escrever na caixa
+     do painel. Simular teclado foi avaliado e descartado pelo usuário (risco de janela errada).
    - **tmux/screen:** o ancestral é o servidor do tmux, não o app de terminal; fica só leitura.
 2. **Depende de formatos internos (frágil):**
    - ChatGPT: endpoints `/backend-api` e HTML do campo de mensagem → `extensions/chrome/background.js`
